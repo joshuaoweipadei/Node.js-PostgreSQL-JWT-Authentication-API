@@ -14,10 +14,10 @@ Connection to PostgreSQL Database.
 {
     "database_conn": {
         "host": "localhost",
-        "database": "", //Enter your postgreSQL datebase name
-        "port": "", //Enter your postgreSQL port
-        "user": "", //Enter your postgreSQL user name
-        "password": "" //Enter your postgreSQL password
+        "database": "", /* Enter your postgreSQL datebase name */
+        "port": "", /* Enter your postgreSQL port */
+        "user": "", /* Enter your postgreSQL user name */
+        "password": "" /* Enter your postgreSQL password */
     },
     "secret": "my secret is coding!!!"
 }
