@@ -18,6 +18,8 @@ const createUserTable = () => {
         password VARCHAR(255) NOT NULL,
         is_verified BOOL DEFAULT(false),
         verification_token VARCHAR(255) NOT NULL,
+        reset_password_token VARCHAR(255),
+        reset_password_expiry DATE,
         created_at DATE NOT NULL
     )`;
     pool.query(createUserQuery).then((res) => {

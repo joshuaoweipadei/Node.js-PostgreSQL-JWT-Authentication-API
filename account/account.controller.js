@@ -5,12 +5,18 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const config = require("../config.json");
 const dbQuery = require("../db/queries")
+const sendEmail = require("../helpers/send-email");
 
 /* 
  * Define all routes
  */
 router.post('/register', register);
 router.post('/login', login);
+router.get('/users', getAll);
+router.delete('/:id', deleteUser);
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-email-token', verifyResetToken);
+router.put('/reset-password', resetPassword)
 
 
 // Export the routers
@@ -81,4 +87,113 @@ async function login(req, res){
     } catch (error) {
         return res.status(500).json({ message: "Operation was not successful" });
     }
+}
+
+
+/*
+ * Get all users
+ */
+async function getAll(req, res){
+    const getAllQuery = `SELECT id, firstname, lastname, email, created_at FROM users`;
+    try {
+        const { rows } = await dbQuery.query(getAllQuery);
+        // return the users row
+        return res.status(200).json(rows)
+
+    } catch (error) {
+        return res.status(500).json({ message: "Operation was not successful" }); 
+    }
+} 
+
+
+/*
+ * Delete users
+ */
+async function deleteUser(req, res){
+    const deleteUserQuery = `DELETE FROM users WHERE id = $1`;
+    try {
+        const { rows } = await dbQuery.query(deleteUserQuery, [req.params.id]);
+        // return the users row
+        return res.status(200).json(rows)
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Operation was not successful" });  
+    }
+}
+
+
+/*
+ * Forgot Password
+ */
+async function forgotPassword(req, res){
+    const { email } = req.body;
+    const emailQuery = `SELECT email, verification_token FROM users WHERE email = $1`;
+
+    const resetQuery = `UPDATE users SET reset_password_token = $1, reset_password_expiry = $2 WHERE email = $3 returning * `;
+    const resetPasswordToken = crypto.randomBytes(36).toString('hex');
+    const resetPasswordExpiry = new Date(Date.now() + 24*60*60*1000);
+
+    try {
+        const { rows } = await dbQuery.query(emailQuery, [email]);
+        const dbResult = rows[0];
+
+        // Check if the user eamil exist
+        if(!dbResult){
+            return res.status(400).json({ message: "Account with this email does not exist" });
+        }
+
+        // Store the reset password token and expiry date
+        await dbQuery.query(resetQuery, [resetPasswordToken, resetPasswordExpiry, email]);
+
+        // Send email with reser password link
+        const resetPasswordUrl = `${req.get('origin')}/reset-password?email=${dbResult.email}&token=${resetPasswordToken}`;
+        sendEmail({
+            to: email,
+            subject: 'Reset Password',
+            html: `<h4>Enter your new password</h4>
+                <p>Please click the link below to reset your password:</p>
+                <p><a href="${resetPasswordUrl}">${resetPasswordUrl}</a></p>`
+        });
+
+        return res.status(200).json(dbResult);
+        
+    } catch (error) {
+        return res.status(500).json({ message: "Operation was not successful" });
+    }
+}
+
+
+/*
+ * Verify email and token for reset password
+ */
+async function verifyResetToken(req, res){
+    const { email, token } = req.body;
+    const verifyQuery = `SELECT * FROM users WHERE email = $1 AND reset_password_token = $2`;
+
+    try {
+        const { rows } = await dbQuery.query(verifyQuery, [email, token]);
+        const dbResult = rows[0];
+        if(!dbResult){
+            return res.status(400).json({ message: "Invalid parametres provided, cannot reset password" });
+        }
+
+        // Check if the reset password token time have expired
+        if(dbResult.reset_password_expiry < new Date()){
+            return res.status(400).json({ message: "This reset password token has expired." });
+        }
+
+        // if email and token verification is correct, return a status of ok
+        return res.status(200);
+
+    } catch (error) {
+        return res.status(500).json({ message: "Operation was not successful" });
+    }
+}
+
+
+/*
+ * Reset password
+ */
+async function resetPassword(req, res){
+    console.log(req.body);
 }
