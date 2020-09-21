@@ -5,35 +5,13 @@
 npm install
 ```
 
-Before starting the server, create a 'config.json' file in the root directory.
-
-Copy and paste this codes below. Enter your database name, user, port and password
-
-Connection to PostgreSQL Database.
-```json
-{
-    "database_conn": {
-        "host": "",
-        "database": "",
-        "port": "",
-        "user": "", 
-        "password": ""
-    },
-    "secret": "my secret is coding!!!",
-    "emailFrom": "example@gmail.com",
-    "smtpEmailOptions": {
-        "host": "",
-        "port": "",
-        "auth": {
-            "user": "",
-            "pass": ""
-        }
-    }
-}
-```
-
-
 ### Start Server and Create Database Tables
 ```
 npm run setup
 ```
+This command will create the database table(s) and start up the server together.
+
+
+
+### The Front-end App for this API
+See [Vue.js-Vuex-User-JWT-Authentication-Boilerplate-App](https://github.com/joshuaoweipadei/Vue.js-Vuex-User-JWT-Authentication-Boilerplate-App)
