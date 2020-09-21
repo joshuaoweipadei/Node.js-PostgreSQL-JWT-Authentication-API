@@ -1,5 +1,5 @@
-const nodemailer = require('nodemailer');
-const config = require('../config.json');
+const nodemailer = require("nodemailer");
+const config = require("../config.json");
 
 module.exports = sendEmail;
 

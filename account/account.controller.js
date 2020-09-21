@@ -4,7 +4,8 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const config = require("../config.json");
-const dbQuery = require("../db/queries")
+const dbQuery = require("../db/queries");
+const verifyToken = require("../helpers/jwt-verify");
 const sendEmail = require("../helpers/send-email");
 
 /* 
@@ -13,8 +14,8 @@ const sendEmail = require("../helpers/send-email");
 router.post('/register', register);
 router.post('/login', login);
 router.post('/verify-email', verifyEmail);
-router.get('/users', getAll);
-router.delete('/:id', deleteUser);
+router.get('/users', verifyToken, getAll);
+router.delete('/:id', verifyToken, deleteUser);
 router.post('/forgot-password', forgotPassword);
 router.post('/verify-reset-password-email-token', verifyResetToken);
 router.put('/reset-password', resetPassword)
