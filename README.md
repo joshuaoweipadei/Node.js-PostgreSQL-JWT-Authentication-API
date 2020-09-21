@@ -13,13 +13,22 @@ Connection to PostgreSQL Database.
 ```json
 {
     "database_conn": {
-        "host": "localhost",
+        "host": "",
         "database": "",
         "port": "",
         "user": "", 
         "password": ""
     },
-    "secret": "my secret is coding!!!"
+    "secret": "my secret is coding!!!",
+    "emailFrom": "example@gmail.com",
+    "smtpEmailOptions": {
+        "host": "",
+        "port": "",
+        "auth": {
+            "user": "",
+            "pass": ""
+        }
+    }
 }
 ```
 

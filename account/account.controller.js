@@ -12,10 +12,11 @@ const sendEmail = require("../helpers/send-email");
  */
 router.post('/register', register);
 router.post('/login', login);
+router.post('/verify-email', verifyEmail);
 router.get('/users', getAll);
 router.delete('/:id', deleteUser);
 router.post('/forgot-password', forgotPassword);
-router.post('/verify-email-token', verifyResetToken);
+router.post('/verify-reset-password-email-token', verifyResetToken);
 router.put('/reset-password', resetPassword)
 
 
@@ -45,6 +46,16 @@ async function register(req, res){
         // remove password and return back data to the user
         delete dbResult.password;
 
+        // Send registration email
+        const verifyEmailUrl = `${req.get('origin')}/verify-email?token=${dbResult.verification_token}`;
+        sendEmail({
+            to: email,
+            subject: 'Verify Email',
+            html: `<h4>Verify Email Account</h4>
+                <p>Please click the link below to verify your email address:</p>
+                <p><a href="${verifyEmailUrl}">${verifyEmailUrl}</a></p>`
+        });
+
         return res.status(200).json(dbResult)
     } catch (error) {
         // if email address already exist
@@ -58,7 +69,7 @@ async function register(req, res){
 
 
 /*
- * Login
+ * Login user
  */
 async function login(req, res){
     const { email, password } = req.body;
@@ -77,6 +88,10 @@ async function login(req, res){
             return res.status(400).json({ message: "Incorrect password" });
         }
 
+        if(!dbResult.is_verified){
+            return res.status(400).json({ message: "Your account have not been verified yet, follow the link in your email inbox and verify this account" });
+        }
+
         // Generate user login token
         const token = jwt.sign({ sub: dbResult.id, id: dbResult.id, email: dbResult.email }, config.secret, { expiresIn: '2h' });
         // remove password and return back data to the user
@@ -91,10 +106,46 @@ async function login(req, res){
 
 
 /*
+ * Verify email account
+ */
+async function verifyEmail(req, res){
+    console.log(req.body)
+    const { token } = req.body;
+    const verifyEmailQuery = `SELECT * FROM users WHERE verification_token = $1`;
+
+    // Query to update is_verified field
+    const resetQuery = `UPDATE users SET is_verified = $1 WHERE verification_token = $2 returning * `;
+
+    try {
+        const { rows } = await dbQuery.query(verifyEmailQuery, [token]);
+        const dbResult = rows[0];
+
+        // Check if the token is associated with any account
+        if(!dbResult){
+            return res.status(400).json({ message: "Invalid Parametre: Email account verification failed" });
+        }
+
+        // Check if the account have been verified previously
+        if(dbResult.is_verified){
+            return res.status(400).json({ message: "This account have been verified already" });
+        }
+
+        // Update is_verified to true
+        await dbQuery.query(resetQuery, [true, token]);
+
+        return res.status(200).json("Email account verification successful");
+
+    } catch (error) {
+        return res.status(500).json({ message: "Operation was not successful" });
+    }
+}
+
+
+/*
  * Get all users
  */
 async function getAll(req, res){
-    const getAllQuery = `SELECT id, firstname, lastname, email, created_at FROM users`;
+    const getAllQuery = `SELECT id, firstname, lastname, email, created_at FROM users ORDER BY id ASC`;
     try {
         const { rows } = await dbQuery.query(getAllQuery);
         // return the users row
@@ -195,5 +246,21 @@ async function verifyResetToken(req, res){
  * Reset password
  */
 async function resetPassword(req, res){
-    console.log(req.body);
+    const { email, token, password } = req.body;
+
+    // Hash new password
+    const hashPassword = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
+
+    // Store the new password
+    const resetPasswordQuery = `UPDATE users SET password = $1 WHERE email = $2 AND reset_password_token = $3 returning *`;
+
+    try {
+        await dbQuery.query(resetPasswordQuery, [hashPassword, email, token]);
+
+        // return a 200 status code
+        return res.status(200).json("Reset password was successful, login now");
+
+    } catch (error) {
+        return res.status(500).json({ message: "Operation was not successful" });
+    }
 }
